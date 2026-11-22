@@ -1,6 +1,4 @@
-// Tiny stack VM (make.fun tiny stack ISA v1): answers a whole set in one
-// run, reading /input/<id>/program.bin + input.bin and writing
-// /output/<id>/stdout.bin + exit.txt per instance. Node 22, stdlib only.
+// Tiny stack VM (ISA v1), Node 22, stdlib only.
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -32,7 +30,6 @@ function run(prog: Uint8Array, input: Uint8Array): Answer {
     let pops = 0;
     let pushes = 0;
     if (op < 0x08) {
-      // 00 HALT, 01 PUSH8, 02 PUSH32, 03 POP, 04 DUP, 05 SWAP, 06 OVER, 07 ROT
       if (op === 0x01) { imm = 1; pushes = 1; }
       else if (op === 0x02) { imm = 4; pushes = 1; }
       else if (op === 0x03) pops = 1;
@@ -41,14 +38,12 @@ function run(prog: Uint8Array, input: Uint8Array): Answer {
       else if (op === 0x06) { pops = 2; pushes = 3; }
       else if (op === 0x07) { pops = 3; pushes = 3; }
     } else if (op >= 0x10 && op <= 0x1e) {
-      // arithmetic/logic: two in, one out; NEG/NOT take one
       pops = op === 0x17 || op === 0x1b ? 1 : 2;
       pushes = 1;
     } else if (op >= 0x20 && op <= 0x22) {
       pops = 2;
       pushes = 1;
     } else if (op >= 0x30 && op <= 0x34) {
-      // jumps and calls carry a 2-byte immediate, except RET
       if (op !== 0x34) imm = 2;
       if (op === 0x31 || op === 0x32) pops = 1;
     } else if (op === 0x40) {
@@ -57,7 +52,6 @@ function run(prog: Uint8Array, input: Uint8Array): Answer {
     } else if (op === 0x41) {
       pops = 2;
     } else if (op >= 0x50 && op <= 0x53) {
-      // PRINT/PUTC/EXIT pop one; IN pushes one
       if (op === 0x52) pushes = 1;
       else pops = 1;
     } else {
@@ -210,10 +204,8 @@ function run(prog: Uint8Array, input: Uint8Array): Answer {
         data[sp++] = ip < input.length ? input[ip++] : -1;
         break;
       case 0x53:
-        // EXIT: exit with the low byte of the popped value
         return done(data[--sp] & 255);
       default:
-        // unreachable: the decoder above already rejected unknown opcodes
         return done(5);
     }
   }
